@@ -1,0 +1,10 @@
+name: hyperbolic
+channels:
+  - defaults
+dependencies:
+  - matplotlib
+  - numpy
+  - pip
+  - python=2.7
+  - keras
+  - h5py
