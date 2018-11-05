@@ -15,13 +15,13 @@ import time
 # Define parameters
 DATASET = 'cora'
 FILTER = 'localpool'  # 'chebyshev'
-MAX_DEGREE = 2  # maximum polynomial degree
+MAX_DEGREE = 4  # maximum polynomial degree
 SYM_NORM = True  # symmetric (True) vs. left-only (False) normalization
-NB_EPOCH = 200
-PATIENCE = 10  # early stopping patience
+NB_EPOCH = 2000
+PATIENCE = 50  # early stopping patience
 
 # Get data
-X, A, y = load_data(dataset=DATASET)
+X, A, y = load_edgelist("chg-miner")
 y_train, y_val, y_test, idx_train, idx_val, idx_test, train_mask = get_splits(y)
 
 # Normalize X
@@ -54,13 +54,13 @@ X_in = Input(shape=(X.shape[1],))
 # NOTE: We pass arguments for graph convolutional layers as a list of tensors.
 # This is somewhat hacky, more elegant options would require rewriting the Layer base class.
 H = Dropout(0.5)(X_in)
-H = GraphConvolution(16, support, activation='relu', kernel_regularizer=l2(5e-4))([H]+G)
+H = GraphConvolution(64, support, activation='relu', kernel_regularizer=l2(5e-4))([H]+G)
 H = Dropout(0.5)(H)
 Y = GraphConvolution(y.shape[1], support, activation='softmax')([H]+G)
 
 # Compile model
 model = Model(inputs=[X_in]+G, outputs=Y)
-model.compile(loss='categorical_crossentropy', optimizer=Adam(lr=0.01))
+model.compile(loss='categorical_crossentropy', optimizer=Adam(lr=0.0001))
 
 # Helper variables for main training loop
 wait = 0
