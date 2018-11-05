@@ -3,7 +3,7 @@ from __future__ import print_function
 import scipy.sparse as sp
 import numpy as np
 from scipy.sparse.linalg.eigen.arpack import eigsh, ArpackNoConvergence
-
+import snap
 
 def encode_onehot(labels):
     classes = set(labels)
@@ -11,18 +11,54 @@ def encode_onehot(labels):
     labels_onehot = np.array(list(map(classes_dict.get, labels)), dtype=np.int32)
     return labels_onehot
 
-def load_edgelist(edgelist_path="../data/email/email-Eu-core.txt", 
+def load_edgelist(name="email", edgelist_path="../data/email/email-Eu-core.txt", 
                     label_path="../data/email/email-Eu-core-department-labels.txt"):
-    print("Loading edgelist")
-     
     
+    if name == "email":
+        edgelist_path = "../data/email/email-Eu-core.txt"
+        label_path = "../data/email/email-Eu-core-department-labels.txt"
+
+    if name == "chg-miner":
+        edgelist_path = "../data/chg-miner/chg-miner-graph.txt"
+        label_path = "../data/chg-miner/chg-miner-labels.txt"
+
+    # graph
+    graph = snap.LoadEdgeList(snap.PNGraph, edgelist_path, 0, 1, ' ')
+    edges = []
+    for e in graph.Edges():
+        edges.append([e.GetSrcNId(), e.GetDstNId()])
+    edges = np.array(edges)
+
+    # labels
+    labels_raw = []
+    with open(label_path, 'r') as f:
+        labels_raw = [l.split(' ')[1].strip('\n') for l in f.readlines()]
+
+    labels = encode_onehot(labels_raw)
+
+    # symmetric adjacency matrix
+    adj = sp.coo_matrix((np.ones(edges.shape[0]), (edges[:, 0], edges[:, 1])),
+                        shape=(graph.GetNodes(), graph.GetNodes()), dtype=np.float32)
+    adj = adj + adj.T.multiply(adj.T > adj) - adj.multiply(adj.T > adj)
+
+    # features (zeros)
+    features = sp.csr_matrix(np.random.normal(size=(graph.GetNodes(), 10)), dtype=np.float32)
+
+    print('Dataset has {} nodes, {} edges, {} features.'.format(adj.shape[0], edges.shape[0], features.shape[1]))
     
+    print('Features shape is ' + str(features.shape))
+    print('Adjacency shape is ' + str(adj.shape))
+    print('Labels shape is ' + str(labels.shape))
+    return features.todense(), adj, labels
+
 def load_data(path="data/cora/", dataset="cora"):
     """Load citation network dataset (cora only for now)"""
     print('Loading {} dataset...'.format(dataset))
 
     idx_features_labels = np.genfromtxt("{}{}.content".format(path, dataset), dtype=np.dtype(str))
+    #print(idx_features_labels[:, 1:-1])
     features = sp.csr_matrix(idx_features_labels[:, 1:-1], dtype=np.float32)
+    print(idx_features_labels[:,-1])
     labels = encode_onehot(idx_features_labels[:, -1])
 
     # build graph
@@ -31,6 +67,7 @@ def load_data(path="data/cora/", dataset="cora"):
     edges_unordered = np.genfromtxt("{}{}.cites".format(path, dataset), dtype=np.int32)
     edges = np.array(list(map(idx_map.get, edges_unordered.flatten())),
                      dtype=np.int32).reshape(edges_unordered.shape)
+    print(edges)
     adj = sp.coo_matrix((np.ones(edges.shape[0]), (edges[:, 0], edges[:, 1])),
                         shape=(labels.shape[0], labels.shape[0]), dtype=np.float32)
 
@@ -71,9 +108,9 @@ def sample_mask(idx, l):
 
 
 def get_splits(y):
-    idx_train = range(140)
-    idx_val = range(200, 500)
-    idx_test = range(500, 1500)
+    idx_train = range(600)
+    idx_val = range(600, 800)
+    idx_test = range(800, 1005)
     y_train = np.zeros(y.shape, dtype=np.int32)
     y_val = np.zeros(y.shape, dtype=np.int32)
     y_test = np.zeros(y.shape, dtype=np.int32)
