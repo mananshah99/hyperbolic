@@ -11,9 +11,17 @@ from graph import GraphConvolution
 from utils import *
 
 import time
+import numpy as np
+import nmslib
+import scipy
+from sklearn.neighbors import NearestNeighbors
+
+
+from keras import callbacks
+remote = callbacks.RemoteMonitor(root='http://localhost:9000', headers=None)
 
 # Define parameters
-DATASET = 'cora'
+DATASET = 'email' #'chg-miner'
 FILTER = 'localpool'  # 'chebyshev'
 MAX_DEGREE = 4  # maximum polynomial degree
 SYM_NORM = True  # symmetric (True) vs. left-only (False) normalization
@@ -21,11 +29,41 @@ NB_EPOCH = 2000
 PATIENCE = 50  # early stopping patience
 
 # Get data
-X, A, y = load_edgelist("chg-miner")
+X, A, y = load_edgelist(DATASET)
 y_train, y_val, y_test, idx_train, idx_val, idx_test, train_mask = get_splits(y)
+
+def __knn_sklearn(X, k, n_jobs=-1, verbose=False, **kwargs):
+
+    nn = NearestNeighbors(n_neighbors=k+1, n_jobs=n_jobs,
+                          algorithm='ball_tree', **kwargs)
+    nn.fit(X)
+
+    if verbose:
+        print('Indexing done.')
+    dist, ind = nn.kneighbors(X, k+1, return_distance=True)
+
+    if verbose:
+        print('Query done.')
+
+    return dist[:,1:].astype(X.dtype), ind[:,1:]
+
+def get_knn_adj(X, k=15):
+    _, idx = __knn_sklearn(X, k=k)
+    N = X.shape[0]
+    k = idx.shape[1]
+    rows = np.repeat(range(N), k)
+    cols = idx.flatten()
+    data = np.ones((N*k))
+    adj = sp.coo_matrix((data, (rows, cols)), shape=(N, N))
+    adj = adj + adj.T.multiply(adj.T > adj) - adj.multiply(adj.T > adj)
+
+    return preprocess_adj(adj, True)
 
 # Normalize X
 X /= X.sum(1).reshape(-1, 1)
+
+# KNN for A
+A = get_knn_adj(A)
 
 if FILTER == 'localpool':
     """ Local pooling filters (see 'renormalization trick' in Kipf & Welling, arXiv 2016) """
@@ -75,7 +113,7 @@ for epoch in range(1, NB_EPOCH+1):
 
     # Single training iteration (we mask nodes without labels for loss calculation)
     model.fit(graph, y_train, sample_weight=train_mask,
-              batch_size=A.shape[0], epochs=1, shuffle=False, verbose=0)
+              batch_size=A.shape[0], epochs=10, shuffle=False, verbose=0, callbacks=[remote])
 
     # Predict on full dataset
     preds = model.predict(graph, batch_size=A.shape[0])
