@@ -11,7 +11,8 @@ python -m openne \
     --graph-format edgelist \
     --output embeddings/node2vec_email.txt \
     --q 0.25 \
-    --p 0.25
+    --p 0.25 \
+    --clf-ratio 0.8
 
 ## chg-miner
 python -m openne \
@@ -21,4 +22,5 @@ python -m openne \
     --graph-format edgelist \
     --output embeddings/node2vec_chg_miner.txt \
     --q 0.25 \
-    --p 0.25
+    --p 0.25 \
+    --clf-ratio 0.8
