@@ -11,12 +11,12 @@ DATASET_NAME = 'email'
 if DATASET_NAME == 'chg-miner':
     edgelist = '../data/chg-miner/chg-miner-graph.txt' 
     labels_path    = '../data/chg-miner/chg-miner-labels.txt' 
-    embedding_path = '../poincare-cpp/embeddings/poincare_chg_miner.txt' 
+    embedding_path = '../poincare/embeddings/poincare_chg_miner.txt' 
 
 elif DATASET_NAME == 'email':
     edgelist = '../data/email/email-Eu-core.txt'
     labels_path = '../data/email/email-Eu-core-department-labels.txt'
-    embedding_path = '../poincare-cpp/embeddings/poincare_email.txt'
+    embedding_path = '../poincare/embeddings/poincare_email.txt'
 
 labels = []
 with open(labels_path, 'r') as f:
