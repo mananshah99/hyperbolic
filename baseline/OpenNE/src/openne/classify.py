@@ -2,6 +2,7 @@ from __future__ import print_function
 import numpy
 from sklearn.multiclass import OneVsRestClassifier
 from sklearn.metrics import f1_score
+from sklearn.metrics import *
 from sklearn.preprocessing import MultiLabelBinarizer
 from time import time
 
@@ -37,14 +38,17 @@ class Classifier(object):
         Y_ = self.predict(X, top_k_list)
         Y = self.binarizer.transform(Y)
         averages = ["micro", "macro", "samples", "weighted"]
+        others = ["accuracy"]
         results = {}
         for average in averages:
             results[average] = f1_score(Y, Y_, average=average)
+        
+        results["accuracy"] = accuracy_score(Y, Y_)
         # print('Results, using embeddings of dimensionality', len(self.embeddings[X[0]]))
-        # print('-------------------')
+        print('-------------------')
         print(results)
         return results
-        # print('-------------------')
+        print('-------------------')
 
     def predict(self, X, top_k_list):
         X_ = numpy.asarray([self.embeddings[x] for x in X])
