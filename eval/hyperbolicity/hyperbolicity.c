@@ -35,7 +35,6 @@
 #define uintN_t uint32_t // already graphs with up to 4G nodes
 #define uintD_t uint16_t // assume diameter at most 2^16-1. Change if needed
 
-
 /*******************************************************************************/
 /* Utility functions                                                           */
 /*******************************************************************************/
@@ -752,6 +751,7 @@ float hyperbolicity_naive_single_thread(data_t *data, graph_t *g)
 // Naive algorithm in O(n^4) with parallelism. Readable. Very slow.
 float hyperbolicity_naive_with_openmp(data_t *data, graph_t *g)
 {
+  FILE* fp = fopen("distribution.txt", "w+");
   pair_t *pair = data->pair;
   pair_t pi, pj;
   uintD_t **dist = data->dist;
@@ -780,7 +780,7 @@ float hyperbolicity_naive_with_openmp(data_t *data, graph_t *g)
 	S2 = distx[z] + disty[r];
 	S3 = distx[r] + disty[z];
 	tmp = pj.d - _MAX_( S2, S3 );
-	    
+	fprintf(fp, "%f\n", (0.5)*(tmp + distx[y])); 
 	if (tmp > delta_dxy) {
 #pragma omp critical
 	  {
@@ -925,6 +925,7 @@ float hyperbolicity_with_openmp(data_t *data, graph_t *g){
   uint64_t cpt_total = 0;
 #endif
 
+  FILE* fp = fopen("distribution.txt", "w+");
   pair_t *pair = data->pair;
   pair_t pi, pj;
   uintD_t **dist = data->dist;
@@ -988,6 +989,7 @@ float hyperbolicity_with_openmp(data_t *data, graph_t *g){
 	  S3 = distx[r] + disty[z];
 
 	  tmp = dxy + pj.d - _MAX_( S2, S3 );
+    fprintf(fp, "%f\n", (0.5)*(tmp)); 
 	  // Using this tmp and delta_dxy allow to save the cost of an operation.
 	  // tmp = pj.d - _MAX_( S2, S3 );
 

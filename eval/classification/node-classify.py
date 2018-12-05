@@ -6,7 +6,7 @@ from sklearn.preprocessing import MultiLabelBinarizer
 from time import time
 from sklearn.linear_model import LogisticRegression
 
-EMBEDDINGS_FILE = '../poincare/embeddings/poincare_email.txt'
+EMBEDDINGS_FILE = '../poincare/embeddings/poincare_email_burn.txt'
 LABELS_FILE = '../data/email/email-Eu-core-department-labels.txt'
 HEADER = False
 
@@ -50,7 +50,6 @@ class Classifier(object):
         print('-------------------')
         print(results)
         return results
-        print('-------------------')
 
     def predict(self, X, top_k_list):
         X_ = numpy.asarray([self.embeddings[x] for x in X])
