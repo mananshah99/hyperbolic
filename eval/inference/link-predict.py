@@ -15,8 +15,8 @@ from predict_utils import mask_test_edges
 import pickle
 from copy import deepcopy
 
-EMBEDDINGS_FILE = '../../baseline/embeddings/node2vec_email.txt'
-GRAPH_FILE = '../../data/email/email-Eu-core.txt'
+EMBEDDINGS_FILE = '../../baseline/embeddings/node2vec_chch_miner.txt'
+GRAPH_FILE = '../../data/chch-miner/chch-miner.txt'
 HEADER = True
 
 def sigmoid(x):

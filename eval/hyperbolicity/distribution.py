@@ -1,4 +1,6 @@
-# Run: ./a.out algo=1 file=../../data/generated/waxman_hyperbolic.txt -verbose ; python distribution.py
+# Example: 
+# gcc-8 hyperbolicity.c -fopenmp -o hyperbolicity
+# ./hyperbolicity algo=1 file=../../data/generated/waxman_hyperbolic.txt -verbose ; python distribution.py
 import os, sys
 import numpy as np
 import pandas as pd

@@ -4,9 +4,10 @@ from sklearn.multiclass import OneVsRestClassifier
 from sklearn.metrics import *
 from sklearn.preprocessing import MultiLabelBinarizer
 from time import time
-from sklearn.linear_model import LogisticRegression
+from sklearn.linear_model import *
+from sklearn.ensemble import *
 
-EMBEDDINGS_FILE = '../../graphsage/embeddings/graphsage_email-Eu-core.txt' #'../poincare/embeddings/poincare_email_burn.txt'
+EMBEDDINGS_FILE = '../../poincare/embeddings/node2vec_poincare_email.txt' #'../poincare/embeddings/poincare_email_burn.txt'
 LABELS_FILE = '../../data/email/email-Eu-core-department-labels.txt'
 HEADER = False
 
@@ -109,5 +110,5 @@ def read_node_label(filename):
 vectors = load_embeddings(EMBEDDINGS_FILE)
 X, Y = read_node_label(LABELS_FILE)
 print("Training classifier using {:.2f}% nodes...".format(0.8*100))
-clf = Classifier(vectors=vectors, clf=LogisticRegression())
+clf = Classifier(vectors=vectors, clf=RandomForestClassifier())
 clf.split_train_evaluate(X, Y, 0.8)
