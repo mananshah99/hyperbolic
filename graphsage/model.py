@@ -38,8 +38,25 @@ class SupervisedGraphSage(nn.Module):
         scores = self.forward(nodes)
         return self.xent(scores, labels.squeeze())
 
-def load_edgelist(name="email", edgelist_path="../data/email/email-Eu-core.txt", 
-                    label_path="../data/email/email-Eu-core-department-labels.txt"):
+def load_embeddings(filename, HEADER):
+    fin = open(filename, 'r')
+    if HEADER:
+        node_num, size = [int(x) for x in fin.readline().strip().split()]
+    vectors = {}
+    while 1:
+        l = fin.readline()
+        if l == '':
+            break
+        vec = l.strip().split(' ')
+        if HEADER:
+            assert len(vec) == size+1
+        vectors[vec[0]] = [float(x) for x in vec[1:]]
+    fin.close()
+    if HEADER:
+        assert len(vectors) == node_num
+    return vectors
+
+def load_edgelist(name, edgelist_path, label_path, embedding_path, embedding_header):
     
     if name == "email":
         edgelist_path = "../data/email/email-Eu-core.txt"
@@ -77,24 +94,30 @@ def load_edgelist(name="email", edgelist_path="../data/email/email-Eu-core.txt",
         adj_list[e[1]].add(e[0])
 
     # features (zeros)
-    features = sp.csr_matrix(np.random.normal(size=(graph.GetNodes(), 1000)), dtype=np.float32)
-
+    if embedding_path is None:
+        features = sp.csr_matrix(np.random.normal(size=(graph.GetNodes(), 1000)), dtype=np.float32).todense()
+    else:
+        embeddings = load_embeddings(embedding_path, embedding_header)
+        features = np.zeros(shape=(graph.GetNodes(), len(embeddings[embeddings.keys()[0]])))
+        for e in embeddings.keys():
+            features[int(e)] = embeddings[e]
+        
     print('Dataset has {} nodes, {} edges, {} features.'.format(adj.shape[0], edges.shape[0], features.shape[1]))
     
     print('Features shape is ' + str(features.shape))
     print('Adjacency shape is ' + str(adj.shape))
     print('Labels shape is ' + str(labels.shape))
-    return features.todense(), labels, adj_list, adj.shape[0]
+    return features, labels, adj_list, adj.shape[0]
 
 def run_edgelist(name="email", edgelist_path="../data/email/email-Eu-core.txt", 
-                    label_path="../data/email/email-Eu-core-department-labels.txt"):
+                    label_path="../data/email/email-Eu-core-department-labels.txt",
+                    embedding_path="../poincare/embeddings/node2vec_poincare_email.txt", embedding_header = False):
 
-    feat_data, labels, adj_lists, num_nodes = load_edgelist(name, edgelist_path, label_path)
-    features = nn.Embedding(num_nodes, feat_data.shape[0])
+    feat_data, labels, adj_lists, num_nodes = load_edgelist(name, edgelist_path, label_path, embedding_path, embedding_header)
+    features = nn.Embedding(num_nodes, feat_data.shape[1])
     features.weight = nn.Parameter(torch.FloatTensor(feat_data), requires_grad=False)
-
     agg1 = MeanAggregator(features, cuda=True)
-    enc1 = Encoder(features, 1000, 128, adj_lists, agg1, gcn=True, cuda=False)
+    enc1 = Encoder(features, feat_data.shape[1], 128, adj_lists, agg1, gcn=True, cuda=False)
     agg2 = MeanAggregator(lambda nodes : enc1(nodes).t(), cuda=False)
     enc2 = Encoder(lambda nodes : enc1(nodes).t(), enc1.embed_dim, 128, adj_lists, agg2,
             base_model=enc1, gcn=True, cuda=False)
@@ -103,14 +126,14 @@ def run_edgelist(name="email", edgelist_path="../data/email/email-Eu-core.txt",
 
     graphsage = SupervisedGraphSage(max(labels)[0]+1, enc2)
     rand_indices = np.random.permutation(num_nodes)
-    test = rand_indices[:100]
-    val = rand_indices[100:300]
-    train = list(rand_indices[300:])
+    test = rand_indices[:300]
+    val = rand_indices[300:400]
+    train = list(rand_indices[400:])
 
-    optimizer = torch.optim.SGD(filter(lambda p : p.requires_grad, graphsage.parameters()), lr=0.8)
+    optimizer = torch.optim.SGD(filter(lambda p : p.requires_grad, graphsage.parameters()), lr=1)
     times = []
     # embeds = None
-    for batch in range(100):
+    for batch in range(1000):
         batch_nodes = train[:256]
         random.shuffle(train)
         start_time = time.time()
@@ -123,9 +146,9 @@ def run_edgelist(name="email", edgelist_path="../data/email/email-Eu-core.txt",
         end_time = time.time()
         times.append(end_time-start_time)
         print batch, loss.data[0]
-
-    val_output = graphsage.forward(val) 
-    print "Validation F1:", f1_score(labels[val], val_output.data.numpy().argmax(axis=1), average="micro")
+        
+    val_output = graphsage.forward(test) 
+    print "Test F1:", f1_score(labels[test], val_output.data.numpy().argmax(axis=1), average="macro")
     print "Average batch time:", np.mean(times)   
     
     out = open('embeddings/' + 'graphsage_' + edgelist_path.split('/')[-1], 'wb+')
