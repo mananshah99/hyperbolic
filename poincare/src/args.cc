@@ -34,6 +34,8 @@ void Args::parse_args(const std::vector<std::string>& args) {
                 exit(EXIT_FAILURE);
             } else if (args[ai] == "-graph") {
                 graph = std::string(args.at(ai + 1));
+            } else if (args[ai] == "-labels") {
+                labels = std::string(args.at(ai + 1));
             } else if (args[ai] == "-input-vectors") {
                 input_vectors = std::string(args.at(ai + 1));
             } else if (args[ai] == "-output-vectors") {

@@ -4,6 +4,7 @@
 #include <iomanip>
 #include <thread>
 #include <algorithm>
+#include <map>
 
 // how many edges to process before reporting on performance
 constexpr int32_t REPORTING_INTERVAL = 50;
@@ -99,6 +100,20 @@ void Poincare::train() {
         std::cerr << "Loading vectors: " << args_->input_vectors << "\n";
         load_vectors(args_->input_vectors);
     }
+
+    std::map<int, int> labels;
+    // load the map of labels
+    if(!args_->labels.empty()) {
+        std::ifstream ifs_labels(args_->labels);
+        if (!ifs_labels.is_open()) {
+            throw std::invalid_argument(args_->labels + " cannot be opened!");
+        }
+        int node_id;
+        int label;
+        while(ifs_labels >> node_id >> label) {
+            labels[node_id] = label;
+        }
+    }
     // start the training!
     real lr_delta_per_epoch = (args_->start_lr - args_->end_lr) / args_->epochs;;
     for (int32_t epoch = 0; epoch < args_->epochs; epoch++) {
@@ -111,7 +126,7 @@ void Poincare::train() {
         for (int32_t thread_id = 0; thread_id < args_->threads; thread_id++) {
             int32_t thread_seed = args_->seed + epoch * args_->threads + thread_id;
             threads.push_back(std::thread([=]() {
-                epoch_thread(thread_id, thread_seed, epoch_start_lr, epoch_end_lr);
+                epoch_thread(thread_id, thread_seed, epoch_start_lr, epoch_end_lr, labels);
             }));
         }
         for (auto it = threads.begin(); it != threads.end(); ++it) {
@@ -121,7 +136,7 @@ void Poincare::train() {
     save_checkpoint(args_->epochs);
 }
 
-void Poincare::epoch_thread(int32_t thread_id, uint32_t seed, real start_lr, real end_lr) {
+void Poincare::epoch_thread(int32_t thread_id, uint32_t seed, real start_lr, real end_lr, std::map<int, int> label_map) {
     std::minstd_rand rng(1 + seed); // seed 0 and 1 coincide for minstd_rand
     const int64_t edges_per_thread = digraph->edges.size() / args_->threads;
     Model model(vectors_, args_);
@@ -145,11 +160,20 @@ void Poincare::epoch_thread(int32_t thread_id, uint32_t seed, real start_lr, rea
         samples.push_back(target_enum);
         // draw some distinct negative samples, excluding positive samples
         while (samples.size() < args_->number_negatives + 1) {
-            auto next_negative = sampler->get_sample(edge->source.target_enums, rng);
-			if (std::find(samples.begin(), samples.end(), next_negative) != samples.end()) {
-				continue; // already have this sample
+            if(label_map.empty()) {
+                auto next_negative = sampler->get_sample(edge->source.target_enums, rng);
+    			if (std::find(samples.begin(), samples.end(), next_negative) != samples.end()) {
+    				continue; // already have this sample
+                }
+                samples.push_back(next_negative);
             }
-            samples.push_back(next_negative);
+            else {
+                auto next_negative = sampler->get_sample(edge->source.target_enums, rng);
+                if (std::find(samples.begin(), samples.end(), next_negative) != samples.end() || label_map[next_negative] == label_map[source_enum]) {
+                    continue; // already have this sample
+                }
+                samples.push_back(next_negative);                
+            }
         }
 
         model.nickel_kiela_objective(source_enum, samples, lr);

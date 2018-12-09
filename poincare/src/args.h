@@ -9,6 +9,7 @@ class Args {
     public:
         Args();
         std::string graph;
+        std::string labels;
         std::string input_vectors;
         std::string output_vectors;
         double start_lr;

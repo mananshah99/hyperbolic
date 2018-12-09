@@ -3,6 +3,7 @@
 #include <random>
 #include <fstream>
 #include <memory>
+#include <map>
 
 #include "args.h"
 #include "digraph.h"
@@ -34,7 +35,7 @@ class Poincare {
     void load_vectors(std::string);
     void print_info(clock_t, real, int64_t, real, real);
 
-    void epoch_thread(int32_t thread_id, uint32_t seed, real start_lr, real end_lr);
+    void epoch_thread(int32_t thread_id, uint32_t seed, real start_lr, real end_lr, std::map<int, int> label_map);
     void train();
 
 };
