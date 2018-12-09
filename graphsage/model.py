@@ -7,7 +7,7 @@ import numpy as np
 import scipy.sparse as sp
 import time
 import random
-from sklearn.metrics import f1_score
+from sklearn.metrics import f1_score, accuracy_score
 from collections import defaultdict
 
 from encoders import Encoder
@@ -109,26 +109,34 @@ def load_edgelist(name, edgelist_path, label_path, embedding_path, embedding_hea
     print('Labels shape is ' + str(labels.shape))
     return features, labels, adj_list, adj.shape[0]
 
-def run_edgelist(name="email", edgelist_path="../data/email/email-Eu-core.txt", 
-                    label_path="../data/email/email-Eu-core-department-labels.txt",
-                    embedding_path="../poincare/embeddings/node2vec_poincare_email.txt", embedding_header = False):
+def run_edgelist(name="email",
+                    edgelist_path    = "../data/email/email-Eu-core.txt", 
+                    label_path       = "../data/email/email-Eu-core-department-labels.txt",
+                    embedding_path   = "../poincare/embeddings/poincare_email_noburn.txt", # used to initialize + for distances
+                    embedding_header = False):
 
     feat_data, labels, adj_lists, num_nodes = load_edgelist(name, edgelist_path, label_path, embedding_path, embedding_header)
     features = nn.Embedding(num_nodes, feat_data.shape[1])
     features.weight = nn.Parameter(torch.FloatTensor(feat_data), requires_grad=False)
+
+    # network
+    node_ordering_embeddings = load_embeddings(embedding_path, embedding_header)
+
     agg1 = MeanAggregator(features, cuda=True)
-    enc1 = Encoder(features, feat_data.shape[1], 128, adj_lists, agg1, gcn=True, cuda=False)
+    enc1 = Encoder(features, feat_data.shape[1], 128, adj_lists, agg1, gcn=True, cuda=False, ordering_embeddings = None)
     agg2 = MeanAggregator(lambda nodes : enc1(nodes).t(), cuda=False)
     enc2 = Encoder(lambda nodes : enc1(nodes).t(), enc1.embed_dim, 128, adj_lists, agg2,
-            base_model=enc1, gcn=True, cuda=False)
-    enc1.num_samples = 5
-    enc2.num_samples = 5
+            base_model=enc1, gcn=True, cuda=False, ordering_embeddings = node_ordering_embeddings)
+
+    # make sure we don't sample -- but change this later?
+    enc1.num_sample = None
+    enc2.num_sample = None
 
     graphsage = SupervisedGraphSage(max(labels)[0]+1, enc2)
     rand_indices = np.random.permutation(num_nodes)
-    test = rand_indices[:300]
-    val = rand_indices[300:400]
-    train = list(rand_indices[400:])
+    test = rand_indices[:10]
+    val = rand_indices[10:11]
+    train = list(rand_indices[11:])
 
     optimizer = torch.optim.SGD(filter(lambda p : p.requires_grad, graphsage.parameters()), lr=1)
     times = []
@@ -149,6 +157,7 @@ def run_edgelist(name="email", edgelist_path="../data/email/email-Eu-core.txt",
         
     val_output = graphsage.forward(test) 
     print "Test F1:", f1_score(labels[test], val_output.data.numpy().argmax(axis=1), average="macro")
+    print "Test Accuracy:", accuracy_score(labels[test], val_output.data.numpy().argmax(axis=1))
     print "Average batch time:", np.mean(times)   
     
     out = open('embeddings/' + 'graphsage_' + edgelist_path.split('/')[-1], 'wb+')
