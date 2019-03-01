@@ -45,7 +45,10 @@ class Graph(object):
 
         if directed:
             def read_unweighted(l):
-                src, dst = l.split()
+                try:
+                    src, dst = l.split()
+                except:
+                    src, dst = l.split('\t')
                 self.G.add_edge(src, dst)
                 self.G[src][dst]['weight'] = 1.0
 
@@ -55,7 +58,10 @@ class Graph(object):
                 self.G[src][dst]['weight'] = float(w)
         else:
             def read_unweighted(l):
-                src, dst = l.split()
+                try:
+                    src, dst = l.split()
+                except:
+                    src, dst = l.split('\t')
                 self.G.add_edge(src, dst)
                 self.G.add_edge(dst, src)
                 self.G[src][dst]['weight'] = 1.0
@@ -75,6 +81,8 @@ class Graph(object):
             l = fin.readline()
             if l == '':
                 break
+            if l[0] == '#':
+                continue
             func(l)
         fin.close()
         self.encode_node()
