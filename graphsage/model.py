@@ -109,10 +109,10 @@ def load_edgelist(name, edgelist_path, label_path, embedding_path, embedding_hea
     print('Labels shape is ' + str(labels.shape))
     return features, labels, adj_list, adj.shape[0]
 
-def run_edgelist(name="email",
-                    edgelist_path    = "../data/email/email-Eu-core.txt", 
-                    label_path       = "../data/email/email-Eu-core-department-labels.txt",
-                    embedding_path   = "../poincare/embeddings/poincare_email_noburn.txt", # used to initialize + for distances
+def run_edgelist(name="chg-miner",
+                    edgelist_path    = "../data/chg-miner/chg-miner-graph.txt", 
+                    label_path       = "../data/chg-miner/chg-miner-labels.txt",
+                    embedding_path   = "../poincare/embeddings/poincare_chg_miner_noburn.txt", # used to initialize + for distances
                     embedding_header = False):
 
     feat_data, labels, adj_lists, num_nodes = load_edgelist(name, edgelist_path, label_path, embedding_path, embedding_header)
@@ -137,8 +137,9 @@ def run_edgelist(name="email",
     test = rand_indices[:10]
     val = rand_indices[10:11]
     train = list(rand_indices[11:])
-
-    optimizer = torch.optim.SGD(filter(lambda p : p.requires_grad, graphsage.parameters()), lr=1)
+    
+    # 1 for email
+    optimizer = torch.optim.SGD(filter(lambda p : p.requires_grad, graphsage.parameters()), lr=0.6)
     times = []
     # embeds = None
     for batch in range(1000):

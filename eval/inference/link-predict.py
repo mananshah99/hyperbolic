@@ -5,9 +5,10 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import scipy.sparse as sp
 import numpy as np
-from sklearn.metrics import roc_auc_score, average_precision_score, roc_curve
+from sklearn.metrics import *
 from sklearn.manifold import spectral_embedding
-from sklearn.linear_model import LogisticRegression
+from sklearn.linear_model import *
+from sklearn.ensemble import *
 import time
 import os
 import tensorflow as tf
@@ -15,8 +16,8 @@ from predict_utils import mask_test_edges
 import pickle
 from copy import deepcopy
 
-EMBEDDINGS_FILE = '../../baseline/embeddings/node2vec_chch_miner.txt'
-GRAPH_FILE = '../../data/chch-miner/chch-miner.txt'
+EMBEDDINGS_FILE = '../../baseline/embeddings/node2vec_chg_miner.txt'
+GRAPH_FILE = '../../data/chg-miner/chg-miner-graph.txt'
 HEADER = True
 
 def sigmoid(x):
@@ -225,7 +226,7 @@ def embedding_scores(g_train, train_test_split, embedding_file, edge_score_mode 
     # Create node embeddings matrix (rows = nodes, columns = embedding features)
     emb_list = []
     for node_index in range(0, adj_train.shape[0]):
-        node_str = str(node_index)
+        node_str = str(list(g_train.nodes())[node_index])
         node_emb = emb_mappings[node_str]
         emb_list.append(node_emb)
     emb_matrix = np.vstack(emb_list)
@@ -238,8 +239,8 @@ def embedding_scores(g_train, train_test_split, embedding_file, edge_score_mode 
             for edge in edge_list:
                 node1 = edge[0]
                 node2 = edge[1]
-                emb1 = emb_matrix[node1]
-                emb2 = emb_matrix[node2]
+                emb1 = emb_mappings[str(node1)]
+                emb2 = emb_mappings[str(node2)]
                 edge_emb = np.multiply(emb1, emb2)
                 embs.append(edge_emb)
             embs = np.array(embs)
@@ -269,7 +270,7 @@ def embedding_scores(g_train, train_test_split, embedding_file, edge_score_mode 
         test_edge_labels = np.concatenate([np.ones(len(test_edges)), np.zeros(len(test_edges_false))])
 
         # Train logistic regression classifier on train-set edge embeddings
-        edge_classifier = LogisticRegression(random_state=0)
+        edge_classifier = RandomForestClassifier(random_state=0)
         edge_classifier.fit(train_edge_embs, train_edge_labels)
 
         # Predicted edge scores: probability of being of class "1" (real edge)

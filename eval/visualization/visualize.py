@@ -9,14 +9,14 @@ LOG_DIR = 'vis'
 DATASET_NAME = 'email'
 
 if DATASET_NAME == 'chg-miner':
-    edgelist = '../data/chg-miner/chg-miner-graph.txt' 
-    labels_path    = '../data/chg-miner/chg-miner-labels.txt' 
-    embedding_path = '../baseline/embeddings/node2vec_chg_miner.txt' 
+    edgelist = '../../data/chg-miner/chg-miner-graph.txt' 
+    labels_path    = '../../data/chg-miner/chg-miner-labels.txt' 
+    embedding_path = '../../graphsage/embeddings/graphsage_chg-miner-graph.txt' 
 
 elif DATASET_NAME == 'email':
-    edgelist = '../data/email/email-Eu-core.txt'
-    labels_path = '../data/email/email-Eu-core-department-labels.txt'
-    embedding_path = '../baseline/embeddings/node2vec_email.txt'
+    edgelist = '../../data/email/email-Eu-core.txt'
+    labels_path = '../../data/email/email-Eu-core-department-labels.txt'
+    embedding_path = '../../graphsage/embeddings/graphsage_email-Eu-core.txt'
 
 labels = []
 with open(labels_path, 'r') as f:
